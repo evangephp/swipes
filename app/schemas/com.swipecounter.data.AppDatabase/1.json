@@ -1,0 +1,389 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "2a346856b671e76ac733f2e7f92ca000",
+    "entities": [
+      {
+        "tableName": "session",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `helperInstance` INTEGER NOT NULL, `startWallMs` INTEGER NOT NULL, `deviceName` TEXT NOT NULL, `panelMaxX` INTEGER NOT NULL, `panelMaxY` INTEGER NOT NULL, `naturalWidth` INTEGER NOT NULL, `naturalHeight` INTEGER NOT NULL, `dpi` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "helperInstance",
+            "columnName": "helperInstance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startWallMs",
+            "columnName": "startWallMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deviceName",
+            "columnName": "deviceName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "panelMaxX",
+            "columnName": "panelMaxX",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "panelMaxY",
+            "columnName": "panelMaxY",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "naturalWidth",
+            "columnName": "naturalWidth",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "naturalHeight",
+            "columnName": "naturalHeight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dpi",
+            "columnName": "dpi",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "stroke",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, `helperInstance` INTEGER NOT NULL, `firstSeq` INTEGER NOT NULL, `startWallMs` INTEGER NOT NULL, `startMonoUs` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `slot` INTEGER NOT NULL, `groupId` INTEGER NOT NULL, `multiFinger` INTEGER NOT NULL, `kind` INTEGER NOT NULL, `scroll` INTEGER NOT NULL, `mask` INTEGER NOT NULL, `pkg` TEXT, `rotation` INTEGER NOT NULL, `pathMm` REAL NOT NULL, `pointCount` INTEGER NOT NULL, `x0` INTEGER, `y0` INTEGER, `x1` INTEGER, `y1` INTEGER, `points` BLOB)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "helperInstance",
+            "columnName": "helperInstance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeq",
+            "columnName": "firstSeq",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startWallMs",
+            "columnName": "startWallMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startMonoUs",
+            "columnName": "startMonoUs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slot",
+            "columnName": "slot",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "groupId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "multiFinger",
+            "columnName": "multiFinger",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scroll",
+            "columnName": "scroll",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mask",
+            "columnName": "mask",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pkg",
+            "columnName": "pkg",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rotation",
+            "columnName": "rotation",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pathMm",
+            "columnName": "pathMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pointCount",
+            "columnName": "pointCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "x0",
+            "columnName": "x0",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "y0",
+            "columnName": "y0",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "x1",
+            "columnName": "x1",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "y1",
+            "columnName": "y1",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "points",
+            "columnName": "points",
+            "affinity": "BLOB"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_stroke_helperInstance_firstSeq",
+            "unique": true,
+            "columnNames": [
+              "helperInstance",
+              "firstSeq"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_stroke_helperInstance_firstSeq` ON `${TABLE_NAME}` (`helperInstance`, `firstSeq`)"
+          },
+          {
+            "name": "index_stroke_startWallMs",
+            "unique": false,
+            "columnNames": [
+              "startWallMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stroke_startWallMs` ON `${TABLE_NAME}` (`startWallMs`)"
+          }
+        ]
+      },
+      {
+        "tableName": "daily_stats",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day` TEXT NOT NULL, `taps` INTEGER NOT NULL, `longPresses` INTEGER NOT NULL, `swipes` INTEGER NOT NULL, `scrolls` INTEGER NOT NULL, `multiFinger` INTEGER NOT NULL, `distanceMm` REAL NOT NULL, `touchMs` INTEGER NOT NULL, PRIMARY KEY(`day`))",
+        "fields": [
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taps",
+            "columnName": "taps",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longPresses",
+            "columnName": "longPresses",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "swipes",
+            "columnName": "swipes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scrolls",
+            "columnName": "scrolls",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "multiFinger",
+            "columnName": "multiFinger",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "distanceMm",
+            "columnName": "distanceMm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "touchMs",
+            "columnName": "touchMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day"
+          ]
+        }
+      },
+      {
+        "tableName": "heat_bucket",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hourStartMs` INTEGER NOT NULL, `kind` INTEGER NOT NULL, `grid` BLOB NOT NULL, PRIMARY KEY(`hourStartMs`, `kind`))",
+        "fields": [
+          {
+            "fieldPath": "hourStartMs",
+            "columnName": "hourStartMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grid",
+            "columnName": "grid",
+            "affinity": "BLOB",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "hourStartMs",
+            "kind"
+          ]
+        }
+      },
+      {
+        "tableName": "capture_gap",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startWallMs` INTEGER NOT NULL, `endWallMs` INTEGER NOT NULL, `reason` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startWallMs",
+            "columnName": "startWallMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endWallMs",
+            "columnName": "endWallMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "meta",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`key` TEXT NOT NULL, `value` TEXT NOT NULL, PRIMARY KEY(`key`))",
+        "fields": [
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "key"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2a346856b671e76ac733f2e7f92ca000')"
+    ]
+  }
+}
