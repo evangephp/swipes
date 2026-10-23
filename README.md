@@ -5,13 +5,27 @@ Built for and tested on a Samsung Galaxy S25 Ultra (Android 16), unrooted.
 
 ## Features
 
-- **Home**: recording status, today's taps/swipes/scrolls/long presses, finger travel, touch time, most-touched apps,
+- **Home**: recording status, today's taps/swipes/scrolls/typing, finger travel, touch time, most-touched apps,
   latest touches.
-- **Analytics**: touch-down or finger-path heatmaps over the last 2 hours, today, yesterday, 7 days, this month,
-  year to date, or a custom date range.
+- **Analytics**: for the last 2 hours, today, yesterday, 7 days, this month, year to date, or a custom date range:
+  touch-down or finger-path heatmaps, and touches per hour of day.
 - **Replay**: video-like playback of finger paths for a time range, 1×–64×, with idle time skipped by default.
+  Traces are colored by app (your 8 most-used apps keep fixed colors), a live per-app tally runs alongside, and the
+  scrub bar shows touch volume over time.
+- **Widgets**: *Today*, *Most touched today* and *Next milestone*. On One UI, long-press one on the home screen →
+  *Create stack* and add the others to swipe between them. An alternative to the status notification, which can be
+  turned off in Settings (as can milestone notifications).
 - **Milestones**: notifications such as "You've scrolled 1,000 times today" or "Your finger has traveled 3 miles on
   the phone this month"; each fires at most once per day/week/month/year.
+
+## What counts as what
+
+- **Taps / long presses / swipes / scrolls** are touches on app content: a swipe moves more than 1.5 mm, a scroll is a
+  mostly vertical swipe.
+- **Typing** is any touch on the on-screen keyboard (key presses, glide typing), counted separately so taps aren't
+  dominated by typing.
+- Each touch is credited to the app whose window is under the finger (a notification pop-up only claims touches on
+  the pop-up itself).
 
 ## Privacy
 

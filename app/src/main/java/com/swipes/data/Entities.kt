@@ -1,5 +1,6 @@
 package com.swipes.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -63,10 +64,33 @@ data class DailyStatsEntity(
     val multiFinger: Int = 0,
     val distanceMm: Double = 0.0,
     val touchMs: Long = 0,
+    /** Keyboard touches; not included in taps/long presses/swipes/scrolls. */
+    @ColumnInfo(defaultValue = "0") val typing: Int = 0,
 ) {
     operator fun plus(o: DailyStatsEntity) = DailyStatsEntity(
         day, taps + o.taps, longPresses + o.longPresses, swipes + o.swipes, scrolls + o.scrolls,
-        multiFinger + o.multiFinger, distanceMm + o.distanceMm, touchMs + o.touchMs,
+        multiFinger + o.multiFinger, distanceMm + o.distanceMm, touchMs + o.touchMs, typing + o.typing,
+    )
+
+    val touches get() = taps + longPresses + swipes + typing
+}
+
+/** The same counters as [DailyStatsEntity] per UTC hour, for hour-of-day charts. */
+@Entity(tableName = "hour_stats")
+data class HourStatsEntity(
+    @PrimaryKey val hourStartMs: Long,
+    val taps: Int = 0,
+    val longPresses: Int = 0,
+    val swipes: Int = 0,
+    val scrolls: Int = 0,
+    val multiFinger: Int = 0,
+    val distanceMm: Double = 0.0,
+    val touchMs: Long = 0,
+    val typing: Int = 0,
+) {
+    operator fun plus(d: DailyStatsEntity) = HourStatsEntity(
+        hourStartMs, taps + d.taps, longPresses + d.longPresses, swipes + d.swipes, scrolls + d.scrolls,
+        multiFinger + d.multiFinger, distanceMm + d.distanceMm, touchMs + d.touchMs, typing + d.typing,
     )
 }
 

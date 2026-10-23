@@ -26,19 +26,26 @@ class ReplayData(private val db: AppDatabase) {
         db.captureDao().sessions().associate { it.id to PanelGeometry(it.panelMaxX, it.panelMaxY, it.naturalWidth, it.naturalHeight, it.dpi) }
     }
 
-    /** Streams stroke times through a cursor so long ranges never hold every row in memory. */
-    fun timeline(range: TimeRange, condensed: Boolean): ReplayTimeline {
+    /**
+     * Timeline plus scrub-bar histogram and tally. Streams rows through a cursor (twice: the
+     * timeline must exist before strokes can be placed on it) so long ranges never hold every row.
+     */
+    fun overview(range: TimeRange, condensed: Boolean, bins: Int, isSystem: (String?) -> Boolean): ReplayOverview {
         CaptureEngine.flushNow()
-        val builder = ReplayTimeline.Builder()
-        db.query(
-            SimpleSQLiteQuery(
-                "SELECT startWallMs, durationMs FROM stroke WHERE startWallMs >= ? AND startWallMs < ? ORDER BY startWallMs",
-                arrayOf(range.startMs, range.endMs),
-            ),
-        ).use { c ->
-            while (c.moveToNext()) builder.add(c.getLong(0), c.getLong(0) + c.getLong(1))
+        val query = SimpleSQLiteQuery(
+            "SELECT startWallMs, durationMs, pkg FROM stroke WHERE startWallMs >= ? AND startWallMs < ? ORDER BY startWallMs",
+            arrayOf(range.startMs, range.endMs),
+        )
+        val timelineBuilder = ReplayTimeline.Builder()
+        db.query(query).use { c ->
+            while (c.moveToNext()) timelineBuilder.add(c.getLong(0), c.getLong(0) + c.getLong(1))
         }
-        return builder.build(range.startMs, range.endMs, condensed)
+        val timeline = timelineBuilder.build(range.startMs, range.endMs, condensed)
+        val overview = ReplayOverview.Builder(timeline, bins, isSystem)
+        db.query(query).use { c ->
+            while (c.moveToNext()) overview.add(c.getLong(0), if (c.isNull(2)) null else c.getString(2))
+        }
+        return overview.build()
     }
 
     fun load(fromWallMs: Long, toWallMs: Long): List<ReplayStroke> =

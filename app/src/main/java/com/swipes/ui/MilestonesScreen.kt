@@ -140,6 +140,7 @@ private fun AddRuleDialog(onDismiss: () -> Unit, onAdd: (MilestoneRuleEntity) ->
                     when (it) {
                         Metric.DISTANCE -> "distance"
                         Metric.TOUCH_TIME -> "touch time"
+                        Metric.TYPING -> "typing"
                         else -> it.noun
                     }
                 }

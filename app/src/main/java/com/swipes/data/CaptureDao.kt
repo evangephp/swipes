@@ -25,6 +25,24 @@ interface CaptureDao {
     @Upsert
     fun upsertDailyStats(stats: DailyStatsEntity)
 
+    @Query("SELECT * FROM hour_stats WHERE hourStartMs = :hourStartMs")
+    fun hourStats(hourStartMs: Long): HourStatsEntity?
+
+    @Query("SELECT * FROM hour_stats WHERE hourStartMs >= :fromMs AND hourStartMs < :toMs")
+    fun hourStatsBetween(fromMs: Long, toMs: Long): List<HourStatsEntity>
+
+    @Upsert
+    fun upsertHourStats(stats: List<HourStatsEntity>)
+
+    @Upsert
+    fun upsertDailyStats(stats: List<DailyStatsEntity>)
+
+    @Query("DELETE FROM daily_stats")
+    fun clearDailyStats()
+
+    @Query("DELETE FROM hour_stats")
+    fun clearHourStats()
+
     @Query("SELECT * FROM heat_bucket WHERE hourStartMs = :hourStartMs AND kind = :kind")
     fun heatBucket(hourStartMs: Long, kind: Int): HeatBucketEntity?
 
@@ -60,6 +78,15 @@ interface CaptureDao {
             "GROUP BY pkg ORDER BY count DESC LIMIT :limit",
     )
     fun observeTopApps(fromWallMs: Long, limit: Int): Flow<List<AppCount>>
+
+    @Query(
+        "SELECT pkg, COUNT(*) AS count FROM stroke WHERE startWallMs >= :fromWallMs AND pkg IS NOT NULL " +
+            "GROUP BY pkg ORDER BY count DESC LIMIT :limit",
+    )
+    fun topApps(fromWallMs: Long, limit: Int): List<AppCount>
+
+    @Query("SELECT pkg, COUNT(*) AS count FROM stroke WHERE pkg IS NOT NULL GROUP BY pkg ORDER BY count DESC LIMIT :limit")
+    fun topAppsAllTime(limit: Int): List<AppCount>
 }
 
 data class AppCount(val pkg: String, val count: Int)

@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.swipes.Prefs
 import com.swipes.R
 import com.swipes.capture.CaptureEngine
 import com.swipes.data.AppDatabase
@@ -36,7 +37,7 @@ import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.ZoneId
 
-private enum class Screen { HOME, ANALYTICS, REPLAY, MILESTONES, SETUP, VALIDATE }
+private enum class Screen { HOME, ANALYTICS, REPLAY, MILESTONES, SETUP, VALIDATE, SETTINGS }
 
 private val TABS = listOf(Screen.HOME, Screen.ANALYTICS, Screen.REPLAY, Screen.MILESTONES)
 
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         CaptureEngine.start(this)
+        Prefs.load(this)
         setContent {
             SwipesTheme {
                 Surface(Modifier.fillMaxSize()) {
@@ -94,12 +96,13 @@ private fun App(modifier: Modifier) {
     ) { padding ->
         Box(Modifier.padding(padding)) {
             when (screen) {
-                Screen.HOME -> HomeScreen(engine, setupDone, topApps, onSetup = { screen = Screen.SETUP }, onValidate = { screen = Screen.VALIDATE })
+                Screen.HOME -> HomeScreen(engine, setupDone, topApps, onSetup = { screen = Screen.SETUP }, onSettings = { screen = Screen.SETTINGS })
                 Screen.ANALYTICS -> AnalyticsScreen()
                 Screen.REPLAY -> ReplayScreen()
                 Screen.MILESTONES -> MilestonesScreen(engine)
                 Screen.SETUP -> SetupScreen(checks, engine, onValidate = { screen = Screen.VALIDATE })
                 Screen.VALIDATE -> ValidationScreen()
+                Screen.SETTINGS -> SettingsScreen(onSetup = { screen = Screen.SETUP }, onValidate = { screen = Screen.VALIDATE })
             }
         }
     }

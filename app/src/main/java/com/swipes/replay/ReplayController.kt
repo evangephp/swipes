@@ -13,9 +13,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Playback clock plus a sliding window of strokes loaded ahead of it. */
-class ReplayController(private val data: ReplayData, private val scope: CoroutineScope) {
-    var timeline by mutableStateOf<ReplayTimeline?>(null)
+class ReplayController(
+    private val data: ReplayData,
+    private val scope: CoroutineScope,
+    /** Runs on the IO dispatcher before loading, e.g. to settle app colors. */
+    private val prepare: () -> Unit,
+    private val isSystem: (String?) -> Boolean,
+) {
+    var overview by mutableStateOf<ReplayOverview?>(null)
         private set
+    val timeline: ReplayTimeline? get() = overview?.timeline
     var playMs by mutableLongStateOf(0)
         private set
     var playing by mutableStateOf(false)
@@ -32,8 +39,10 @@ class ReplayController(private val data: ReplayData, private val scope: Coroutin
         playing = false
         openJob?.cancel()
         openJob = scope.launch {
-            val t = withContext(Dispatchers.IO) { data.timeline(range, condensed) }
-            timeline = t
+            overview = withContext(Dispatchers.IO) {
+                prepare()
+                data.overview(range, condensed, SCRUB_BINS, isSystem)
+            }
             seek(0)
         }
     }
@@ -73,6 +82,7 @@ class ReplayController(private val data: ReplayData, private val scope: Coroutin
 
     private companion object {
         const val LOOKBEHIND_MS = 10_000L
+        const val SCRUB_BINS = 120
         const val REFILL_AT_MS = 4_000L
         const val CHUNK_MS = 20_000L
     }

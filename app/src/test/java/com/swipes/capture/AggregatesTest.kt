@@ -37,6 +37,16 @@ class AggregatesTest {
     }
 
     @Test
+    fun `keyboard strokes count only as typing`() {
+        val d = Aggregates.dailyDelta(recorded(0, 5, 5, true, Mask.IME), ZoneId.of("UTC"))
+        assertEquals(listOf(0, 0, 0, 0, 1), listOf(d.taps, d.swipes, d.scrolls, d.multiFinger, d.typing))
+        assertEquals(40L, d.touchMs)
+        assertEquals(1, d.touches)
+        // Lock-screen strokes are still real taps/swipes.
+        assertEquals(1, Aggregates.dailyDelta(recorded(0, 5, 5, false, Mask.LOCK), ZoneId.of("UTC")).swipes)
+    }
+
+    @Test
     fun `heat skips masked strokes and buckets by utc hour`() {
         val grids = HashMap<Pair<Long, Int>, HeatGrid>()
         Aggregates.addHeat(recorded(3_600_000L * 5 + 1234, 0, 0, false), grids)

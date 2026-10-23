@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Swipes</string>
     <string name="a11y_description">Records which app and on-screen element you interact with, alongside touch data. Everything stays on this device.</string>
+    <string name="widget_today_description">Today\'s taps, swipes and typing</string>
+    <string name="widget_top_apps_description">Your 3 most-touched apps today</string>
+    <string name="widget_milestone_description">Progress toward your next milestone</string>
 </resources>

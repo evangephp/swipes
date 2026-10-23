@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -17,24 +18,23 @@ import androidx.compose.ui.unit.dp
 import com.swipes.capture.PanelGeometry
 import com.swipes.capture.Stroke
 
-/** Draws strokes on a phone-shaped frame in the natural (portrait) orientation. */
+/** Draws strokes on a phone-shaped frame in the natural (portrait) orientation, newest first. */
 @Composable
-fun StrokeCanvas(strokes: List<Stroke>, geometry: PanelGeometry, modifier: Modifier = Modifier) {
-    val frame = MaterialTheme.colorScheme.surfaceVariant
-    val ink = MaterialTheme.colorScheme.primary
+fun StrokeCanvas(strokes: List<Stroke>, colors: List<Color>, geometry: PanelGeometry, modifier: Modifier = Modifier) {
     Canvas(
         modifier
             .aspectRatio(geometry.naturalWidth.toFloat() / geometry.naturalHeight)
             .clip(RoundedCornerShape(24.dp))
-            .background(frame),
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
     ) {
         val scale = size.width / geometry.naturalWidth
         fun x(s: Stroke, i: Int) = geometry.naturalX(s.x(i)) * scale
         fun y(s: Stroke, i: Int) = geometry.naturalY(s.y(i)) * scale
         strokes.forEachIndexed { index, s ->
             if (s.pointCount == 0) return@forEachIndexed
-            // Newest first, fading out.
-            val color = ink.copy(alpha = (1f - index / (strokes.size + 2f)).coerceIn(0.2f, 1f))
+            // Older strokes fade out.
+            val color = colors[index].copy(alpha = (1f - index / (strokes.size + 2f)).coerceIn(0.2f, 1f))
             if (s.pointCount == 1) {
                 drawCircle(color, 5.dp.toPx(), Offset(x(s, 0), y(s, 0)))
                 return@forEachIndexed

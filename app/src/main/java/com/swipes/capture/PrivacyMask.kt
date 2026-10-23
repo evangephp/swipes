@@ -20,6 +20,7 @@ class ScreenContext {
     val locked = Timeline<Boolean?>(null)
     val rotation = Timeline(0)
     val foregroundPackage = Timeline<String?>(null)
+    val windows = Timeline<List<WindowSnap>?>(null)
 }
 
 /**

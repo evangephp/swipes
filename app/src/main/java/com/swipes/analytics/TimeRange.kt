@@ -45,6 +45,13 @@ object TimeRanges {
         return from.toString() to to.toString()
     }
 
+    /** Number of local calendar days [range] touches (today counts as one even if partial). */
+    fun dayCount(range: TimeRange, zone: ZoneId): Int {
+        val from = Instant.ofEpochMilli(range.startMs).atZone(zone).toLocalDate()
+        val to = Instant.ofEpochMilli(range.endMs - 1).atZone(zone).toLocalDate()
+        return (java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1).toInt().coerceAtLeast(1)
+    }
+
     /** True if [range] starts and ends on local midnights (or now), so daily aggregates cover it exactly. */
     fun isDayAligned(range: TimeRange, nowMs: Long, zone: ZoneId): Boolean {
         fun midnight(ms: Long) = Instant.ofEpochMilli(ms).atZone(zone).let { it.toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli() == ms }

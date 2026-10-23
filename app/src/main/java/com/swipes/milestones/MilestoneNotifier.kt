@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.swipes.Prefs
 import com.swipes.R
 import com.swipes.data.MilestoneRuleEntity
 import com.swipes.ui.MainActivity
@@ -19,7 +20,8 @@ object MilestoneNotifier {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    fun canNotify(context: Context) = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    fun canNotify(context: Context) =
+        Prefs.load(context).milestoneNotifications && NotificationManagerCompat.from(context).areNotificationsEnabled()
 
     fun notify(context: Context, rule: MilestoneRuleEntity) {
         val metric = Metric.of(rule.metric)

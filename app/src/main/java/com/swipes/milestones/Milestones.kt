@@ -12,6 +12,7 @@ enum class Metric(val code: Int, val noun: String) {
     SCROLLS(3, "scrolls"),
     DISTANCE(4, "of finger travel"),
     TOUCH_TIME(5, "of touching"),
+    TYPING(6, "key presses"),
     ;
 
     companion object {
@@ -47,7 +48,8 @@ enum class DistanceUnit(val code: String, val meters: Double, val singular: Stri
 object Milestones {
     /** Metric value in rule units: counts, distance in the rule's unit, touch time in minutes. */
     fun value(metric: Metric, stats: DailyStatsEntity, unit: DistanceUnit): Double = when (metric) {
-        Metric.TOUCHES -> (stats.taps + stats.longPresses + stats.swipes).toDouble()
+        Metric.TOUCHES -> stats.touches.toDouble()
+        Metric.TYPING -> stats.typing.toDouble()
         Metric.TAPS -> stats.taps.toDouble()
         Metric.SWIPES -> stats.swipes.toDouble()
         Metric.SCROLLS -> stats.scrolls.toDouble()
@@ -99,6 +101,7 @@ object Milestones {
             Metric.TAPS -> "You've tapped $times ${period.phrase}."
             Metric.SWIPES -> "You've swiped $times ${period.phrase}."
             Metric.SCROLLS -> "You've scrolled $times ${period.phrase}."
+            Metric.TYPING -> "You've pressed ${"%,d".format(threshold.toLong())} keys ${period.phrase}."
             Metric.DISTANCE -> "Your finger has traveled $amount on the phone ${period.phrase}."
             Metric.TOUCH_TIME -> "You've spent $amount touching your screen ${period.phrase}."
         }

@@ -50,10 +50,13 @@ fun AnalyticsScreen() {
     var result by remember { mutableStateOf<AnalyticsResult?>(null) }
     var loading by remember { mutableStateOf(true) }
     var selected by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var view by rememberSaveable { mutableStateOf(0) }
+    var selectedHour by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(preset, custom, heatKind) {
         loading = true
         selected = null
+        selectedHour = null
         val zone = ZoneId.systemDefault()
         val now = System.currentTimeMillis()
         result = withContext(Dispatchers.IO) { analytics.load(TimeRanges.of(preset, now, zone, custom), heatKind, now, zone) }
@@ -66,18 +69,19 @@ fun AnalyticsScreen() {
     ) {
         Text("Analytics", style = MaterialTheme.typography.headlineMedium)
         RangePicker(preset, custom, onSelect = { p, c -> preset = p; custom = c })
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            listOf(HEAT_DOWN to "Touch-downs", HEAT_PATH to "Finger paths").forEachIndexed { i, (kind, label) ->
-                SegmentedButton(
-                    selected = heatKind == kind,
-                    onClick = { heatKind = kind },
-                    shape = SegmentedButtonDefaults.itemShape(i, 2),
-                ) { Text(label) }
-            }
-        }
+        SegmentedRow(listOf("Heatmap", "By hour"), view) { view = it }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         result?.let { r ->
             StatsStrip(r)
+            if (view == 1) {
+                Card {
+                    HourChart(r.byHour, r.days, selectedHour, { selectedHour = it }, Modifier.padding(16.dp))
+                }
+                return@let
+            }
+            SegmentedRow(listOf("Touch-downs", "Finger paths"), if (heatKind == HEAT_DOWN) 0 else 1) {
+                heatKind = if (it == 0) HEAT_DOWN else HEAT_PATH
+            }
             val max = r.grid.counts.maxOrNull() ?: 0
             if (max == 0) {
                 Text("No touches recorded in this period.", style = MaterialTheme.typography.bodyMedium)
@@ -112,19 +116,33 @@ fun AnalyticsScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SegmentedRow(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        labels.forEachIndexed { i, label ->
+            SegmentedButton(selected = selected == i, onClick = { onSelect(i) }, shape = SegmentedButtonDefaults.itemShape(i, labels.size)) {
+                Text(label)
+            }
+        }
+    }
+}
+
 @Composable
 private fun StatsStrip(r: AnalyticsResult) {
     val s = r.stats
     Card {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row {
-                StatCell("Touches", "%,d".format(s.taps + s.longPresses + s.swipes))
+                StatCell("Touches", "%,d".format(s.touches))
                 StatCell("Taps", "%,d".format(s.taps))
+                StatCell("Swipes", "%,d".format(s.swipes))
                 StatCell("Scrolls", "%,d".format(s.scrolls))
             }
             Row {
-                StatCell("Swipes", "%,d".format(s.swipes))
-                StatCell("Finger travel", formatDistance(s.distanceMm))
+                StatCell("Typing", "%,d".format(s.typing))
+                StatCell("Long presses", "%,d".format(s.longPresses))
+                StatCell("Travel", formatDistance(s.distanceMm))
                 StatCell("Touching", formatDuration(s.touchMs))
             }
         }

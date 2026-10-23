@@ -18,7 +18,9 @@ import com.swipes.adb.AdbState
 import com.swipes.adb.HelperLauncher
 import com.swipes.data.AppDatabase
 import com.swipes.data.CaptureGapEntity
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.swipes.data.DailyStatsEntity
+import com.swipes.data.HourStatsEntity
 import com.swipes.data.MetaEntity
 import com.swipes.data.MilestoneFiredEntity
 import com.swipes.data.MilestoneRuleEntity
@@ -33,6 +35,8 @@ import com.swipes.milestones.MilestoneEvaluator
 import com.swipes.milestones.MilestoneNotifier
 import com.swipes.milestones.Milestones
 import com.swipes.milestones.Period
+import com.swipes.milestones.PeriodTotals
+import com.swipes.widget.Widgets
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,12 +64,14 @@ object CaptureEngine {
     private const val META_SEQ = "resume_seq"
     private const val META_LAST_WALL = "last_sample_wall_ms"
     private const val META_MILESTONES_SEEDED = "milestones_seeded"
+    private const val META_STATS_V3 = "stats_v3"
     private const val MILESTONE_EVAL_MS = 1_000L
     private const val MILESTONE_NOTIFY_INTERVAL_MS = 30_000L
 
     enum class Status { STARTING, CONNECTING, LAUNCHING, RECORDING, NEEDS_PAIRING, NEEDS_WIRELESS_DEBUGGING }
 
-    class Recent(val stroke: Stroke, val kind: Kind, val mask: Mask)
+    /** A recent stroke with positions (masked strokes are never kept here). */
+    class Recent(val stroke: Stroke, val kind: Kind, val pkg: String?)
 
     data class State(
         val status: Status = Status.STARTING,
@@ -108,7 +114,7 @@ object CaptureEngine {
     private val recentStartWallMs = ArrayDeque<Long>()
     private var milestoneRules: List<MilestoneRuleEntity> = emptyList()
     private val milestonesFired = HashSet<Pair<Long, String>>()
-    private val periodBase = HashMap<Period, DailyStatsEntity>()
+    private var periodTotals = PeriodTotals("", emptyMap())
     private var milestonesDirty = true
     private var lastMilestoneEvalMs = 0L
     private var lastMilestoneNotifyMs = -MILESTONE_NOTIFY_INTERVAL_MS
@@ -120,6 +126,8 @@ object CaptureEngine {
     private lateinit var power: PowerManager
     @Volatile private var lockedNow = true
 
+    /** A helper is connected and streaming; launch outcomes must not override "recording" then. */
+    @Volatile private var connected = false
     @Volatile private var lastLaunchAttemptMs = -AUTO_LAUNCH_INTERVAL_MS
     @Volatile private var launching = false
 
@@ -142,6 +150,7 @@ object CaptureEngine {
             val resumeSeq = dao.meta(META_SEQ)?.toLongOrNull() ?: 0L
             instance = resumeInstance
             lastWallMs = dao.meta(META_LAST_WALL)?.toLongOrNull() ?: 0L
+            recomputeStatsIfNeeded()
             loadMilestones()
             refreshToday()
             c.resumeFrom(resumeInstance, resumeSeq)
@@ -190,11 +199,13 @@ object CaptureEngine {
         override fun onIncompatibleHelper() = launchHelper("helper speaks an older protocol")
 
         override fun onDisconnected(reason: String, helperMissing: Boolean) {
+            connected = false
             if (helperMissing) maybeLaunch(reason) else publish { it.copy(status = Status.CONNECTING, detail = reason) }
         }
     }
 
     private fun handleConnected(info: HelperInfo) {
+        connected = true
         if (info.apkPath != app.applicationInfo.sourceDir) launchHelper("helper is from an older install")
         if (info.instanceId != instance || sessionId == 0L) {
             if (instance != 0L && info.instanceId != instance) {
@@ -236,6 +247,10 @@ object CaptureEngine {
             // so poll the keyguard while we believe it's up.
             if (lockedNow && power.isInteractive && !keyguard.isKeyguardLocked) setLocked(now, false, "keyguard gone")
             while (finalizeQueue.isNotEmpty() && finalizeQueue.first().readyAtMs <= now) finalize(finalizeQueue.removeFirst())
+            if (dbToday.day != Aggregates.dayKey(System.currentTimeMillis(), ZoneId.systemDefault())) {
+                refreshToday()
+                Widgets.requestUpdate(app, force = true)
+            }
             if (recorder.size >= FLUSH_EVERY_STROKES || (recorder.size > 0 && now - lastFlushMs >= FLUSH_EVERY_MS)) flush()
             if (milestonesDirty && now - lastMilestoneEvalMs >= MILESTONE_EVAL_MS) evaluateMilestones(now)
         } catch (e: Exception) {
@@ -248,6 +263,11 @@ object CaptureEngine {
         val startMs = s.startMonoUs / 1000
         val mask = PrivacyMask.decide(s, q.geometry, screen)
         val rotation = screen.rotation.at(startMs)
+        val pkg = Attribution.packageAt(
+            screen.windows.at(startMs),
+            q.geometry.screenX(s.x(0), s.y(0), rotation),
+            q.geometry.screenY(s.x(0), s.y(0), rotation),
+        ) ?: screen.foregroundPackage.at(startMs)
         val summary = Classifier.summarize(s, q.geometry, rotation)
         val masked = mask != Mask.NONE
         val last = s.pointCount - 1
@@ -264,7 +284,7 @@ object CaptureEngine {
             kind = summary.kind.code,
             scroll = summary.scroll,
             mask = mask.code,
-            pkg = screen.foregroundPackage.at(startMs),
+            pkg = pkg,
             rotation = rotation,
             pathMm = summary.pathMm,
             pointCount = s.pointCount,
@@ -284,7 +304,7 @@ object CaptureEngine {
         publish {
             it.copy(
                 today = dbToday + recorder.pendingDaily(day, zone),
-                recent = (listOf(Recent(if (masked) s.withoutPoints() else s, summary.kind, mask)) + it.recent).take(RECENT),
+                recent = if (masked) it.recent else (listOf(Recent(s, summary.kind, pkg)) + it.recent).take(RECENT),
             )
         }
     }
@@ -296,6 +316,7 @@ object CaptureEngine {
         val inserted = recorder.flush(ZoneId.systemDefault(), meta)
         lastFlushMs = SystemClock.uptimeMillis()
         refreshToday()
+        Widgets.requestUpdate(app)
         Log.d(TAG, "flushed $inserted strokes, resume at $resumeSeq")
     }
 
@@ -305,11 +326,46 @@ object CaptureEngine {
         dbToday = db.captureDao().dailyStats(day) ?: DailyStatsEntity(day)
         publish { it.copy(today = dbToday + recorder.pendingDaily(day, zone)) }
         val today = LocalDate.parse(day)
-        for (period in Period.entries) {
-            val from = Milestones.periodStart(period, today).toString()
-            periodBase[period] = db.captureDao().dailyStatsBetween(from, day).fold(DailyStatsEntity(day)) { acc, d -> acc + d.copy(day = day) }
-        }
+        periodTotals = PeriodTotals(
+            day,
+            Period.entries.associateWith { period ->
+                val from = Milestones.periodStart(period, today).toString()
+                db.captureDao().dailyStatsBetween(from, day).fold(DailyStatsEntity(day)) { acc, d -> acc + d.copy(day = day) }
+            },
+        )
         milestonesDirty = true
+    }
+
+    /**
+     * Schema v3 split keyboard touches into `typing` and added hourly stats; rebuild both from the
+     * stroke table once so history uses the same definitions as new data.
+     */
+    private fun recomputeStatsIfNeeded() {
+        val dao = db.captureDao()
+        if (dao.meta(META_STATS_V3) != null) return
+        val zone = ZoneId.systemDefault()
+        val daily = HashMap<String, DailyStatsEntity>()
+        val hourly = HashMap<Long, HourStatsEntity>()
+        val query = "SELECT startWallMs, kind, mask, scroll, multiFinger AND firstSeq = groupId, pathMm, durationMs FROM stroke"
+        db.query(SimpleSQLiteQuery(query)).use { c ->
+            while (c.moveToNext()) {
+                val wallMs = c.getLong(0)
+                val d = Aggregates.delta(
+                    Aggregates.dayKey(wallMs, zone), c.getInt(1), c.getInt(2), c.getInt(3) != 0, c.getInt(4) != 0, c.getDouble(5), c.getLong(6),
+                )
+                daily[d.day] = (daily[d.day] ?: DailyStatsEntity(d.day)) + d
+                val hour = Aggregates.hourStart(wallMs)
+                hourly[hour] = (hourly[hour] ?: HourStatsEntity(hour)) + d
+            }
+        }
+        db.runInTransaction {
+            dao.clearDailyStats()
+            dao.upsertDailyStats(daily.values.toList())
+            dao.clearHourStats()
+            dao.upsertHourStats(hourly.values.toList())
+            dao.upsertMeta(MetaEntity(META_STATS_V3, "1"))
+        }
+        Log.i(TAG, "recomputed stats: ${daily.size} days, ${hourly.size} hours")
     }
 
     private fun loadMilestones() {
@@ -331,6 +387,7 @@ object CaptureEngine {
         milestonesFired.clear()
         for (rule in milestoneRules) dao.firedKeys(rule.id).forEach { milestonesFired += rule.id to it }
         milestonesDirty = true
+        Widgets.requestUpdate(app, force = true)
     }
 
     private fun evaluateMilestones(now: Long) {
@@ -339,7 +396,8 @@ object CaptureEngine {
         val zone = ZoneId.systemDefault()
         val day = Aggregates.dayKey(System.currentTimeMillis(), zone)
         val pending = recorder.pendingDaily(day, zone)
-        val totals = Period.entries.associateWith { (periodBase[it] ?: DailyStatsEntity(day)) + pending }
+        if (periodTotals.day != day) refreshToday()
+        val totals = periodTotals.withPending(day, pending) ?: return
         publish { it.copy(periodTotals = totals) }
         if (!MilestoneNotifier.canNotify(app)) return
         for (reached in MilestoneEvaluator.due(milestoneRules, totals, milestonesFired, LocalDate.parse(day))) {
@@ -392,16 +450,19 @@ object CaptureEngine {
         val now = SystemClock.uptimeMillis()
         if (launching || now - lastLaunchAttemptMs < AUTO_LAUNCH_INTERVAL_MS) return
         if (!AdbState.isPaired(app)) {
-            publish { it.copy(status = Status.NEEDS_PAIRING, detail = reason) }
+            if (!connected) publish { it.copy(status = Status.NEEDS_PAIRING, detail = reason) }
             return
         }
         lastLaunchAttemptMs = now
         launching = true
-        publish { it.copy(status = Status.LAUNCHING, detail = reason) }
+        if (!connected) publish { it.copy(status = Status.LAUNCHING, detail = reason) }
         thread(name = "helper-launch") {
             val result = HelperLauncher.launch(app)
             launching = false
+            Log.i(TAG, "launch ($reason): $result")
             publish {
+                // The running helper keeps recording; a failed restart only matters once it's gone.
+                if (connected) return@publish it
                 when (result) {
                     HelperLauncher.Result.Launched -> it.copy(status = Status.CONNECTING, detail = "helper launched")
                     HelperLauncher.Result.NeedsPairing -> it.copy(status = Status.NEEDS_PAIRING, detail = "pairing was removed")

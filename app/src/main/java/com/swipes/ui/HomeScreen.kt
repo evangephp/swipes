@@ -16,11 +16,21 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.isSystemInDarkTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,27 +40,37 @@ import com.swipes.data.AppCount
 import com.swipes.data.DailyStatsEntity
 
 @Composable
-fun HomeScreen(engine: CaptureEngine.State, setupDone: Boolean, topApps: List<AppCount>, onSetup: () -> Unit, onValidate: () -> Unit) {
+fun HomeScreen(engine: CaptureEngine.State, setupDone: Boolean, topApps: List<AppCount>, onSetup: () -> Unit, onSettings: () -> Unit) {
+    val dark = isSystemInDarkTheme()
     Column(
         Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Swipes", style = MaterialTheme.typography.headlineMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Swipes", Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium)
+            IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Settings") }
+        }
         StatusCard(engine, setupDone, onSetup)
         engine.today?.let { TodayCard(it) }
         if (topApps.isNotEmpty()) TopAppsCard(topApps)
         val geometry = CaptureEngine.geometry
         if (geometry != null && engine.recent.isNotEmpty()) {
-            Card {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Latest touches", style = MaterialTheme.typography.titleMedium)
-                    StrokeCanvas(engine.recent.map { it.stroke }, geometry, Modifier.fillMaxWidth(0.55f).align(Alignment.CenterHorizontally))
+                    Text(
+                        "Your last ${engine.recent.size} touches, colored by app. Typing and lock-screen touches aren't shown.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    StrokeCanvas(
+                        engine.recent.map { it.stroke },
+                        engine.recent.map { AppColors.color(it.pkg, dark) },
+                        geometry,
+                        Modifier.fillMaxWidth(0.55f).align(Alignment.CenterHorizontally),
+                    )
                 }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onSetup) { Text("Setup") }
-            OutlinedButton(onClick = onValidate) { Text("Check it's working") }
         }
     }
 }
@@ -86,7 +106,7 @@ private fun TodayCard(today: DailyStatsEntity) {
             Text("Today", style = MaterialTheme.typography.titleMedium)
             Row { StatCell("Taps", "%,d".format(today.taps)); StatCell("Swipes", "%,d".format(today.swipes)); StatCell("Scrolls", "%,d".format(today.scrolls)) }
             Row {
-                StatCell("Long presses", "%,d".format(today.longPresses))
+                StatCell("Typing", "%,d".format(today.typing))
                 StatCell("Finger travel", formatDistance(today.distanceMm))
                 StatCell("Touching", formatDuration(today.touchMs))
             }
@@ -96,7 +116,14 @@ private fun TodayCard(today: DailyStatsEntity) {
 
 @Composable
 private fun TopAppsCard(apps: List<AppCount>) {
-    val pm = LocalContext.current.packageManager
+    val context = LocalContext.current
+    val pm = context.packageManager
+    val dark = isSystemInDarkTheme()
+    var colorsReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { AppColors.ensureAssigned(context) }
+        colorsReady = true
+    }
     val max = apps.maxOf { it.count }.toFloat()
     Card {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,7 +132,11 @@ private fun TopAppsCard(apps: List<AppCount>) {
                 val label = remember(app.pkg) { appLabel(pm, app.pkg) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(label, Modifier.weight(0.4f), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                    LinearProgressIndicator(progress = { app.count / max }, modifier = Modifier.weight(0.45f))
+                    LinearProgressIndicator(
+                        progress = { app.count / max },
+                        modifier = Modifier.weight(0.45f),
+                        color = if (colorsReady) AppColors.color(app.pkg, dark) else MaterialTheme.colorScheme.primary,
+                    )
                     Text("${app.count}", Modifier.weight(0.15f).padding(start = 8.dp), style = MaterialTheme.typography.bodySmall)
                 }
             }

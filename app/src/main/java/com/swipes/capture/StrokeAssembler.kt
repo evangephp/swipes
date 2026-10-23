@@ -25,9 +25,6 @@ class Stroke(
     fun y(i: Int) = points[i * POINT_STRIDE + 2]
 
     fun major(i: Int) = points[i * POINT_STRIDE + 3]
-
-    /** Copy with coordinates removed, for masked strokes kept in memory for display. */
-    fun withoutPoints() = Stroke(firstSeq, slot, startMonoUs, startWallUs, endMonoUs, IntArray(0), groupId, multiFinger)
 }
 
 /** Turns per-slot samples into [Stroke]s, emitted on lift. */
