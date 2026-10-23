@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.swipecounter"
+    namespace = "com.swipes"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.swipecounter"
+        applicationId = "com.swipes"
         minSdk = 30
         targetSdk = 36
         versionCode = 1

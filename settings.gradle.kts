@@ -15,5 +15,5 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "swipe-counter"
+rootProject.name = "swipes"
 include(":app")

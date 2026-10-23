@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Swipe Counter</string>
+    <string name="app_name">Swipes</string>
     <string name="a11y_description">Records which app and on-screen element you interact with, alongside touch data. Everything stays on this device.</string>
 </resources>

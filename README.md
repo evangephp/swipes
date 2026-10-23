@@ -1,4 +1,4 @@
-# Swipe Counter
+# Swipes
 
 Personal Android app that records every finger touch system-wide, in the background, for analytics and replay.
 Built for and tested on a Samsung Galaxy S25 Ultra (Android 16), unrooted.
@@ -31,7 +31,7 @@ consumes touches). So the app starts a small helper with `adb`-level (shell) per
 input device read-only and streams samples to the app over a token-authenticated loopback socket.
 
 ```
-adbd (Wireless debugging) ── pair once, launch ──▶ swipecounter-helper (shell uid, app_process)
+adbd (Wireless debugging) ── pair once, launch ──▶ swipes-helper (shell uid, app_process)
                                                      reads /dev/input/eventN, buffers ~7 min of samples
 app (kept alive by its accessibility service) ◀───── 127.0.0.1, token auth, resume by sequence number
   strokes → privacy masks → in-memory buffer → flush every 30 s / 200 strokes / screen off → Room
@@ -71,5 +71,5 @@ Connect a phone over Wireless debugging: `adb pair <ip>:<pairing-port> <code>`, 
 - Pipeline logic is covered by JVM unit tests (`app/src/test`).
 - On-device checks need real touches: `adb shell input` bypasses the touchscreen device, and SELinux denies shell
   writes to it, so touches can't be injected for the helper to see.
-- Database snapshot for analysis: `adb exec-out run-as com.swipecounter cat databases/swipecounter.db > swipecounter.db`
+- Database snapshot for analysis: `adb exec-out run-as com.swipes cat databases/swipes.db > swipes.db`
   (also copy the `-wal` file, or open the app's Analytics first to flush).
